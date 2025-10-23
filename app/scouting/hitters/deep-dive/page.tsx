@@ -1,23 +1,13 @@
-import { MockDataBanner } from '@/components/Badges';
+import HittersDeepDive from "@/components/HittersDeepDive";
 
-export default function HittersDeepDive() {
+export default function Page() {
   return (
-    <div className="space-y-6">
-      <header>
-        <div className="eyebrow">Scouting · Hitters</div>
-        <h1 className="headline text-3xl">Deep Dive</h1>
-        <MockDataBanner note="Filters, comps, pivots will be wired to live data." />
-      </header>
-
-      <div className="grid md:grid-cols-3 gap-4">
-        <section className="card p-5">
-          <h3 className="font-semibold mb-2">Filters</h3>
-          <p className="text-sm text-muted">Season, split, pitch type, count, zone…</p>
-        </section>
-        <section className="card p-5 md:col-span-2">
-          <h3 className="font-semibold mb-2">Table/Chart</h3>
-          <p className="text-sm text-muted">Materialized views → fast queries.</p>
-        </section>
+    <div className="p-6">
+      <div className="text-xs uppercase opacity-60">Scouting · Hitters</div>
+      <h1 className="text-3xl font-semibold mt-1">Deep Dive</h1>
+      <p className="opacity-60 mt-1">Filters, comps, pivots will be wired to live data.</p>
+      <div className="mt-6">
+        <HittersDeepDive />
       </div>
     </div>
   );
