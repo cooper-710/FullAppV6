@@ -13,12 +13,12 @@ const Q = z.object({
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const parsed = Q.safeParse({
+  const p = Q.safeParse({
     id: searchParams.get('id'),
     start: searchParams.get('start') ?? `${new Date().getFullYear()}-03-01`,
     end: searchParams.get('end') ?? `${new Date().getFullYear()}-11-30`,
   });
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.format() }, { status: 400 });
-  const data = await getStatcastHitter(parsed.data.id, parsed.data.start, parsed.data.end);
+  if (!p.success) return NextResponse.json({ error: 'bad params' }, { status: 400 });
+  const data = await getStatcastHitter(p.data.id, p.data.start, p.data.end);
   return NextResponse.json(data);
 }

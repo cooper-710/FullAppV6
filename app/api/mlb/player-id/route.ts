@@ -1,27 +1,22 @@
-// app/api/mlb/player-id/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { lookupPlayerId } from '@/lib/mlb';
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { searchPlayer } from '@/lib/mlb';
 
-export async function GET(req: NextRequest) {
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const Q = z.object({ q: z.string().min(2) });
+
+export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const player = searchParams.get('player')?.trim();
-
-  if (!player) {
-    return NextResponse.json(
-      { error: 'Missing player query string ?player=' },
-      { status: 400 }
-    );
+  const parse = Q.safeParse({ q: searchParams.get('q') ?? '' });
+  if (!parse.success) return NextResponse.json({ error: 'q required' }, { status: 400 });
+  const q = parse.data.q.trim();
+  const results = await searchPlayer(q);
+  if (results.length === 0 && q.includes(' ')) {
+    const alt = q.replace(/\s+/g, '-');
+    const retry = await searchPlayer(alt);
+    return NextResponse.json(retry);
   }
-
-  try {
-    const id = await lookupPlayerId(player);
-    if (id) return NextResponse.json({ id, player });
-    return NextResponse.json(
-      { error: `No player found for "${player}"` },
-      { status: 404 }
-    );
-  } catch (err) {
-    console.error('lookupPlayerId error', err);
-    return NextResponse.json({ error: 'Lookup failed' }, { status: 500 });
-  }
+  return NextResponse.json(results);
 }

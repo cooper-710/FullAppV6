@@ -1,0 +1,12 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+  py_svc:
+    build:
+      context: ./py-service
+    ports:
+      - "7001:7000"
+    environment:
+      - PYTHONUNBUFFERED=1

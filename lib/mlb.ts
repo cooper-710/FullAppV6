@@ -1,65 +1,42 @@
-// lib/mlb.ts
-const MLB_BASE = 'https://statsapi.mlb.com/api/v1';
+import { httpJSON } from './http';
+import type { MLBPlayerId, PlayerIdentity, HitterSeason } from './types';
 
-type Person = { id: number; fullName: string };
+const BASE = 'https://statsapi.mlb.com/api/v1';
 
-function normalize(str: string) {
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // strip diacritics
-    .replace(/[^a-z\s]/g, '')        // keep letters + spaces
-    .replace(/\s+/g, ' ')
-    .trim();
+export async function searchPlayer(q: string): Promise<PlayerIdentity[]> {
+  const url = `${BASE}/people/search?q=${encodeURIComponent(q)}&sportId=1`;
+  const data = await httpJSON<{ people: any[] }>(url, { ttlMs: 86400000 });
+  return (data.people ?? []).map(p => ({
+    id: p.id,
+    fullName: p.fullName,
+    firstLastName: p.firstLastName,
+    primaryNumber: p.primaryNumber,
+    primaryPosition: p.primaryPosition,
+    currentTeam: p.currentTeam,
+  }));
 }
 
-async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'SequenceBioLab/1.0 (+sequencebiolab.com)' },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return res.json();
-}
-
-/**
- * Robust player-id lookup:
- * 1) Try /people?search=
- * 2) Fallback: /sports/1/players for current season (then previous), filter locally
- */
-export async function lookupPlayerId(name: string): Promise<number | null> {
-  const wanted = normalize(name);
-
-  // 1) Try direct search
-  try {
-    const data = await fetchJSON<{ people?: Person[] }>(
-      `${MLB_BASE}/people?search=${encodeURIComponent(name)}&sportId=1`
-    );
-    const list = data.people ?? [];
-    const exact = list.find((p) => normalize(p.fullName) === wanted);
-    if (exact) return exact.id;
-    const loose = list.find((p) => normalize(p.fullName).includes(wanted));
-    if (loose) return loose.id;
-  } catch {
-    // ignore and fall through
-  }
-
-  // 2) Fallback: season dump and filter
-  const season = new Date().getFullYear();
-  for (const yr of [season, season - 1]) {
-    try {
-      const data = await fetchJSON<{ people?: Person[] }>(
-        `${MLB_BASE}/sports/1/players?season=${yr}&gameType=R`
-      );
-      const list = data.people ?? [];
-      const exact = list.find((p) => normalize(p.fullName) === wanted);
-      if (exact) return exact.id;
-      const loose = list.find((p) => normalize(p.fullName).includes(wanted));
-      if (loose) return loose.id;
-    } catch {
-      // try next year in the loop
-    }
-  }
-
-  return null;
+export async function getHitterSeason(id: MLBPlayerId, season: number): Promise<HitterSeason> {
+  const url = `${BASE}/people/${id}/stats?stats=season&group=hitting&season=${season}`;
+  const data = await httpJSON<any>(url, { ttlMs: 21600000 });
+  const splits = data?.stats?.[0]?.splits?.[0]?.stat ?? {};
+  const n = (x: any) => Number(x ?? 0);
+  return {
+    playerId: id,
+    season,
+    teamId: data?.stats?.[0]?.splits?.[0]?.team?.id,
+    stats: {
+      PA: n(splits.plateAppearances),
+      AB: n(splits.atBats),
+      R: n(splits.runs),
+      H: n(splits.hits),
+      HR: n(splits.homeRuns),
+      RBI: n(splits.rbi),
+      BB: n(splits.baseOnBalls),
+      SO: n(splits.strikeOuts),
+      OBP: n(splits.obp),
+      SLG: n(splits.slg),
+      OPS: n(splits.ops),
+    },
+  };
 }

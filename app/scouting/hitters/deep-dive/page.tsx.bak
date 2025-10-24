@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { formatSavantRows } from '../../formatters';
 import useSWR from "swr";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import PlayerSearch from "@/components/scouting/PlayerSearch";
@@ -20,17 +19,6 @@ function ensureRows(payload:any): Row[] {
 
 const fetcher = (url:string) => fetch(url, { cache: "no-store" }).then(r=>r.json());
 
-const _pctKeys = ['hard','sweet','barrel','xwoba','xba','xslg','swing','whiff','chase','zone','fps','gb','ld','fb'];
-function normalizeSavant(rows: any[]) {
-  return (rows ?? []).map((r:any) => {
-    const o:any = { ...r };
-    for (const k of _pctKeys) {
-      const v = Number((o as any)[k]);
-      if (Number.isFinite(v) && v > 1) (o as any)[k] = v / 100;
-    }
-    return o;
-  });
-}
 export default function Page() {
   const sp = useSearchParams();
   const router = useRouter();
